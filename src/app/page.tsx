@@ -78,6 +78,7 @@ export default function Home() {
       setImages(data.data[currentItem].vsearch_results);
       setCurrentItem(0);
     });
+    handleDurationCalculation();
     startTimer();
   };
 
@@ -92,6 +93,7 @@ export default function Home() {
 
   useEffect(() => {
     numItems.current = items.length;
+    //console.log(items[currentItem]?.start_dwnld);
     handleDurationCalculation();
   }, [items]);
 
@@ -169,10 +171,10 @@ export default function Home() {
             <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={500} height={500} className="bg-white relative object-cover h-full w-full rotate-90" />
           </div>
           <div>
-            <p className="text-white text-2xl">{items[currentItem].description}</p>
+            <p className="description">{items[currentItem].description}</p>
           </div>
         </div>
-        <div className="bg-slate-800 p-5 items-center justify-center">
+        <div className="bg-opacity-20 bg-slate-400 dark:bg-slate-800 p-5 items-center justify-center">
           <ul className="flex flex-row gap-5 justify-center">
             {images.map((image) => (
               <li key={image._id}>
