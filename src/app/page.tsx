@@ -1,113 +1,230 @@
+'use client'
+
 import Image from "next/image";
+import { testData, similarImages } from "@/data/test-data";
+import { useEffect, useState, useRef } from "react";
+
+interface Item {
+  _id: string;
+  description: string;
+  email: string;
+  s3_url: string;
+  vsearch_results: [];
+  start_dwnld: string;
+  end_dwnld: string;
+  start_s3_store: string;
+  end_s3_store: string;
+  start_astra_store: string;
+  end_astra_store: string;
+  start_get_desc: string;
+  end_get_desc: string;
+  start_embedding: string;
+  end_embedding: string;
+  start_vsearch: string;
+  end_vsearch: string;
+}
+
+interface Image {
+  _id: string;
+  brand: string;
+  file_path: string;
+  product_name: string;
+  similarity: number;
+  vsearch_results: any[]; // Add the vsearch_results property
+}
 
 export default function Home() {
+
+  const [items, setItems] = useState<Item[]>([]);
+  const [images, setImages] = useState<Image[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentItem, setCurrentItem] = useState<number>(0);
+  
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const numItems = useRef<number>(0);
+  
+  const duration_dwnld = useRef<number>(0);
+  const duration_s3_store = useRef<number>(0);
+  const duration_astra_store = useRef<number>(0);
+  const duration_get_desc = useRef<number>(0);
+  const duration_embedding = useRef<number>(0);
+  const duration_vsearch = useRef<number>(0);
+
+  const getImages = async () => {
+    if (isRunning) {
+      setIsRunning(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+    try {
+      const response = await fetch("api/images", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      setLoading(false);
+      setItems(data.data);
+      return data;
+    } catch (error) {
+      setError('Failed to fetch images');
+      setLoading(false);
+    }
+  };
+
+  const fetchData = () => {
+    getImages().then((data) => {
+      setImages(data.data[currentItem].vsearch_results);
+    });
+    startTimer();
+  };
+
+  const calculateDuration = (start: string, end: string) => {
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+    return (endTime - startTime);
+  };
+
+  useEffect(() => {
+    fetchData();
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    handleDurationCalculation();
+    numItems.current = items.length;
+  }, [items]);
+
+  useEffect(() => {
+    setImages(items[currentItem]?.vsearch_results || []);
+    handleDurationCalculation();
+  }, [currentItem]);
+
+  const handleDurationCalculation = () => {
+    duration_dwnld.current = calculateDuration(items[currentItem]?.start_dwnld, items[currentItem]?.end_dwnld);
+
+    duration_s3_store.current = calculateDuration(items[currentItem]?.start_s3_store, items[currentItem]?.end_s3_store);
+
+    duration_astra_store.current = calculateDuration(items[currentItem]?.start_astra_store, items[currentItem]?.end_astra_store);
+
+    duration_get_desc.current = calculateDuration(items[currentItem]?.start_get_desc, items[currentItem]?.end_get_desc);
+
+    duration_embedding.current = calculateDuration(items[currentItem]?.start_embedding, items[currentItem]?.end_embedding);
+
+    duration_vsearch.current = calculateDuration(items[currentItem]?.start_vsearch, items[currentItem]?.end_vsearch);
+  };
+
+  const startTimer = () => {
+    if (!isRunning) {
+      setIsRunning(true);
+      timerRef.current = setInterval(() => {
+        setCurrentItem((prevItemNum) => {
+          const newItemNum = prevItemNum + 1;
+          if (newItemNum >= numItems.current) {
+            window.location.reload();
+            return 0; // Reset the counter
+          }
+          return newItemNum;
+        });
+      }, 5000);
+    }
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    setCurrentItem(0);
+    fetchData();
+  };
+
+  if (loading) {
+    return (
+      <main className="container mx-auto p-10 min-h-screen flex items-center justify-center">
+        <div>Fetching latest items...</div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="container mx-auto p-10 min-h-screen flex items-center justify-center">
+        <div>{error}</div>
+      </main>
+    );
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main className="container mx-auto p-10">
+      <section className="flex flex-col gap-10">
+        <div className="items-start justify-center flex gap-10 overflow-hidden">
+          <div className="w-1/4 aspect-square flex-shrink-0">
+            <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={500} height={500} className="bg-white relative object-cover h-full w-full rotate-90" />
+          </div>
+          <div>
+            <p className="text-white text-2xl">{items[currentItem].description}</p>
+          </div>
         </div>
-      </div>
-
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+        <div className="bg-slate-800 p-5 items-center justify-center">
+          <ul className="flex flex-row gap-5 justify-center">
+            {images.map((image) => (
+              <li key={image._id}>
+                <Image src={image.file_path} alt={image.brand} width={100} height={100} className="bg-white object-cover" />
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex flex-row items-stretch gap-5">
+          <div className="workflow-card">
+            <div>
+              <p className="title">Process Image</p>
+              <p>EC2 to read image from Email, S3 to store image, Privatelink to connect to S3</p>
+            </div>
+            <div><span>Duration:</span>{duration_s3_store.current} ms</div>
+          </div>
+          <div className="workflow-card">
+            <div>
+              <p className="title">Store in Astra</p>
+              <p>Store image in Astra</p>
+            </div>
+            <div><span>Duration:</span>{duration_astra_store.current} ms</div>
+          </div>
+          <div className="workflow-card">
+            <div>
+              <p className="title">Get Description</p>
+              <p>Get text description of image</p>
+            </div>
+            <div><span>Duration:</span>{duration_get_desc.current} ms</div>
+          </div>
+          <div className="workflow-card">
+            <div>
+              <p className="title">Generate Embedding</p>
+              <p>use Bedrock to generate embedding from image and description</p>
+            </div>
+            <div><span>Duration:</span>{duration_embedding.current} ms</div>
+          </div>
+          <div className="workflow-card">
+            <div>
+              <p className="title">Vector Search</p>
+              <p>Search for similar images in Astra</p>
+            </div>
+            <div><span>Duration:</span>{duration_vsearch.current} ms</div>
+          </div>
+          <div className="workflow-card">
+            <div>
+              <p className="title">Download</p>
+              <p>Return results of similar items</p>
+            </div>
+            <div><span>Duration:</span>{duration_dwnld.current} ms</div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

@@ -1,0 +1,41 @@
+{
+  "image_uuid": "unique_image_id",
+  "image_url": "https://s3.amazonaws.com/unique_image_id",
+  "image_description": "description of image",
+  "received_timestamp": "2021-07-01T10:00:00Z",
+  "stages": [
+    {
+      "stage": "process image",
+      "description": "EC2 to read image, S3 to store image, Privatelink to connect to S3",
+      "time_spent_in_this_stage": 130,
+      "stage_started_timestamp": "2021-07-01T10:00:00Z",
+      "stage_completed_timestamp": "2021-07-01T10:00:00Z"
+    },
+    {
+      "stage": "amazon_rekognition",
+      "description": "Get text description of image",
+      "time_spent_in_this_stage": 1080,
+      "stage_started_timestamp": "2021-07-01T10:00:01Z",
+      "stage_completed_timestamp": "2021-07-01T10:00:01Z"
+    },
+    {
+      "stage": "generate_embedding",
+      "description": "use Bedrock to generate embedding from image and description",
+      "time_spent_in_this_stage": 2430,
+      "stage_started_timestamp": "2021-07-01T10:00:04Z",
+      "stage_completed_timestamp": "2021-07-01T10:00:04Z"
+    },
+    {
+      "stage": "vector_search",
+      "description": "Search for similar images in Astra",
+      "stage_started_timestamp": 300,
+      "stage_completed_timestamp": "2021-07-01T10:00:08Z"
+    },
+    {
+      "stage": "resturn_results",
+      "description": "return results of similar items",
+      "stage_started_timestamp": 200,
+      "stage_completed_timestamp": "2021-07-01T10:00:10Z"
+    }
+  ]
+}
