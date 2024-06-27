@@ -10,18 +10,18 @@ interface Item {
   email: string;
   s3_url: string;
   vsearch_results: [];
-  start_dwnld: string;
-  end_dwnld: string;
-  start_s3_store: string;
-  end_s3_store: string;
-  start_astra_store: string;
-  end_astra_store: string;
-  start_get_desc: string;
-  end_get_desc: string;
-  start_embedding: string;
-  end_embedding: string;
-  start_vsearch: string;
-  end_vsearch: string;
+  start_dwnld: Date;
+  end_dwnld: Date;
+  start_s3_store: Date;
+  end_s3_store: Date;
+  start_astra_store: Date;
+  end_astra_store: Date;
+  start_get_desc: Date;
+  end_get_desc: Date;
+  start_embedding: Date;
+  end_embedding: Date;
+  start_vsearch: Date;
+  end_vsearch: Date;
 }
 
 interface Image {
@@ -76,14 +76,9 @@ export default function Home() {
   const fetchData = () => {
     getImages().then((data) => {
       setImages(data.data[currentItem].vsearch_results);
+      setCurrentItem(0);
     });
     startTimer();
-  };
-
-  const calculateDuration = (start: string, end: string) => {
-    const startTime = new Date(start).getTime();
-    const endTime = new Date(end).getTime();
-    return (endTime - startTime);
   };
 
   useEffect(() => {
@@ -96,14 +91,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    handleDurationCalculation();
     numItems.current = items.length;
+    handleDurationCalculation();
   }, [items]);
 
   useEffect(() => {
-    setImages(items[currentItem]?.vsearch_results || []);
+    setImages(items[currentItem]?.vsearch_results || []); 
     handleDurationCalculation();
   }, [currentItem]);
+
+  const calculateDuration = (start: Date, end: Date) => {
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+    return (endTime - startTime);
+  };
 
   const handleDurationCalculation = () => {
     duration_dwnld.current = calculateDuration(items[currentItem]?.start_dwnld, items[currentItem]?.end_dwnld);
