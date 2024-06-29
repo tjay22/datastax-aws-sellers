@@ -1,5 +1,5 @@
 export async function GET(request: Request) {
-  const res = await fetch('http://52.12.156.81:8080/images', {
+  const res = await fetch('http://52.12.156.81:8980/images', {
     headers: {
       'Content-Type': 'application/json'
     },

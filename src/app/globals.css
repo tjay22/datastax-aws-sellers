@@ -32,7 +32,57 @@ body {
 
 .description {
   color: rgb(var(--text-color-rgb));
-  @apply text-2xl;
+  @apply text-lg;
+}
+
+.steps{
+  @apply w-full inline-grid relative gap-5 grid-cols-6 overflow-hidden;
+}
+.steps > .step {
+  counter-increment: step-counter;
+  z-index: -10;
+  @apply flex flex-col relative gap-5 text-lg bg-opacity-20 bg-slate-400 dark:bg-slate-800 p-5 items-center justify-center text-center backdrop-blur-md rounded-md border-2 border-opacity-20 border-slate-500;
+}
+.steps > .step > .arrow {
+  position: fixed;
+  left:75%;
+  bottom: 10px;
+  width: 70px;
+  aspect-ratio: 1/1;
+  z-index: 99;
+  transform: translateZ(200px);
+  background: #ED7101;
+  clip-path: polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%);
+}
+.steps > .step:last-child > .arrow {
+  display: none;
+}
+.steps>.step .step-counter{
+  @apply overflow-hidden absolute bottom-0 left-0 w-full h-full;
+}
+.steps > .step .step-counter:before {
+  content: counter(step-counter);
+  font-size: 15rem;
+  z-index: -1;
+  @apply absolute bottom-10 -left-10 text-[#ED7101] m-2 opacity-10;
+}
+.steps > .step > .title {
+  @apply text-xl font-bold h-16 flex;
+}
+.steps > .step > .icons {
+  @apply flex gap-5 shrink-0 grow-0 h-16 object-contain;
+}
+.steps > .step > .icons > img {
+  @apply max-h-[50px] max-w-[150px];
+}
+.steps > .step > p {
+  @apply text-[14px] leading-6 flex-1;
+}
+.steps>.step>.duration{
+  @apply flex flex-col justify-center items-center mt-5 mb-auto;
+}
+.steps > .step > .duration > span {
+  @apply text-sm font-bold block uppercase;
 }
 
 .workflow-card:first-child{
@@ -51,7 +101,7 @@ body {
   z-index: 50;
   transform: translate(-50%, 50%);
   /* background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.5)); */
-  background: orange;
+  background: #ED7101;
   clip-path: polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%);
 }
 .workflow-card:last-child::after{
