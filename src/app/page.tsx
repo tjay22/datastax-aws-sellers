@@ -44,18 +44,19 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentItem, setCurrentItem] = useState<number>(0);
+  const [timerStarted, setTimerStarted] = useState<boolean>(false);
   
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const numItems = useRef<number>(0);
-  const duration = useRef<number>(10000);
+  const animationDuration = useRef<number>(10000);
   
-  const duration_dwnld = useRef<number>(0);
-  const duration_s3_store = useRef<number>(0);
-  const duration_astra_store = useRef<number>(0);
-  const duration_get_desc = useRef<number>(0);
-  const duration_embedding = useRef<number>(0);
-  const duration_vsearch = useRef<number>(0);
+  const duration_dwnld = useRef<number | undefined>(0);
+  const duration_s3_store = useRef<number | undefined>(0);
+  const duration_astra_store = useRef<number | undefined>(0);
+  const duration_get_desc = useRef<number | undefined>(0);
+  const duration_embedding = useRef<number | undefined>(0);
+  const duration_vsearch = useRef<number | undefined>(0);
 
   const getImages = async () => {
     if (isRunning) {
@@ -69,7 +70,6 @@ export default function Home() {
         cache: "no-store",
       });
       const data = await response.json();
-      setLoading(false);
       setItems(data.data);
       return data;
     } catch (error) {
@@ -81,18 +81,13 @@ export default function Home() {
   const fetchData = () => {
     getImages().then((data) => {
       setImages(data.data[currentItem].vsearch_results);
-      setCurrentItem(0);
-      //slideIndicatorSequence();
-      console.log("fetch data: ", scope.current);
+      setLoading(false);
     });
-    handleDurationCalculation();
-    startTimer();
-    console.log(scope.current);
   };
 
   useEffect(() => {
     fetchData();
-    console.log("start: ", scope.current);
+    if (!loading) handleDurationCalculation();
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -102,35 +97,39 @@ export default function Home() {
 
   useEffect(() => {
     numItems.current = items.length;
-    handleDurationCalculation();
-    console.log("Items: ", scope.current);
-    slideIndicatorSequence();
+    if (!loading) handleDurationCalculation();
   }, [items]);
 
   useEffect(() => {
     setImages(items[currentItem]?.vsearch_results || []); 
-    handleDurationCalculation();
-    console.log("currentItem: ", scope.current);
+    if (!loading) handleDurationCalculation();
   }, [currentItem]);
 
   const calculateDuration = (start: Date, end: Date) => {
     const startTime = new Date(start).getTime();
     const endTime = new Date(end).getTime();
-    return (endTime - startTime);
+    const duration = endTime - startTime;
+    return !isNaN(duration) ? duration : 0;
   };
 
   const handleDurationCalculation = () => {
+
+    if(!items[currentItem]) return;
+
+    console.log("it works");
+    setCurrentItem(currentItem);
+    if (!timerStarted) {
+      startTimer();
+      setTimerStarted(true);
+    }
+
     duration_dwnld.current = calculateDuration(items[currentItem]?.start_dwnld, items[currentItem]?.end_dwnld);
-
     duration_s3_store.current = calculateDuration(items[currentItem]?.start_s3_store, items[currentItem]?.end_s3_store);
-
     duration_astra_store.current = calculateDuration(items[currentItem]?.start_astra_store, items[currentItem]?.end_astra_store);
-
     duration_get_desc.current = calculateDuration(items[currentItem]?.start_get_desc, items[currentItem]?.end_get_desc);
-
     duration_embedding.current = calculateDuration(items[currentItem]?.start_embedding, items[currentItem]?.end_embedding);
-
     duration_vsearch.current = calculateDuration(items[currentItem]?.start_vsearch, items[currentItem]?.end_vsearch);
+
   };
 
   const startTimer = () => {
@@ -145,7 +144,7 @@ export default function Home() {
           }
           return newItemNum;
         });
-      }, duration.current);
+      }, animationDuration.current);
     }
   };
 
@@ -198,7 +197,7 @@ export default function Home() {
         width: "100%"
       },
       {
-        duration: duration.current / 1000
+        duration: animationDuration.current / 1000
       }
     );
     await animate(
@@ -207,7 +206,7 @@ export default function Home() {
         width: "100%"
       },
       {
-        duration: duration.current / 1000
+        duration: animationDuration.current / 1000
       }
     );
     await slideIndicatorSequence();
@@ -220,14 +219,14 @@ export default function Home() {
     animate: {
       x: ["-100%", "0%", "100%"],
       transition: {
-        duration: (duration.current / 1000)*2,
+        duration: (animationDuration.current / 1000)*2,
         repeat: Infinity,
       }
     },
     exit: {
       x: "100%",
       transition: {
-        duration: duration.current / 1000
+        duration: animationDuration.current / 1000
       }
     }
   }
@@ -238,15 +237,15 @@ export default function Home() {
     animate: {
       x: ["-100%", "0%", "100%"],
       transition: {
-        duration: (duration.current / 1000)*2,
-        delay: duration.current / 1000,
+        duration: (animationDuration.current / 1000)*2,
+        delay: animationDuration.current / 1000,
         repeat: Infinity,
       }
     },
     exit: {
       x: "100%",
       transition: {
-        duration: duration.current / 1000
+        duration: animationDuration.current / 1000
       }
     }
   }
@@ -272,18 +271,17 @@ export default function Home() {
       <div ref={scope}>
         <AnimatePresence>
           <motion.div
+            key={0}
             id="slide-indicator1" 
             variants={slideIndicator}
             animate="animate"
             initial="initial"
             exit = "exit"
-            onAnimationComplete={() => {
-
-            }}
             className="w-full fixed bottom-0 h-2 bg-[#7AA116]"
           >
           </motion.div>
           <motion.div
+            key={1}
             id="slide-indicator2"
             variants={slideIndicator2}
             animate="animate"
