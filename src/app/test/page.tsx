@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useAnimate, stagger, motion, animate, useAnimationControls, AnimatePresence, delay } from "framer-motion";
-import usePersistState from "./usePersistState";
 
 interface Item {
   _id: string;
@@ -46,6 +45,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [currentItem, setCurrentItem] = useState<number>(0);
   const [timerStarted, setTimerStarted] = useState<boolean>(false);
+  const [isNewData, setIsNewData] = useState<boolean>(false);
   
   const [isRunningSlideshow, setIsRunningSlideshow] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,7 +72,7 @@ export default function Home() {
     //   }
     // }
     try {
-      const response = await fetch("api/images", {
+      const response = await fetch("api/test", {
         cache: "no-store",
       });
       const data = await response.json();
@@ -87,10 +87,12 @@ export default function Home() {
   const fetchData = () => {
     //console.log("items Array in fetchData: ", items);
     getData().then((data) => {
-      updateItemsState(data.data);
+      updateItemsState(data);
       //setImages(data.data[currentItem].vsearch_results);
       setLoading(false);
     });
+    //controls.start("initial");
+    //controls.start("animate");
   };
 
   const partialEmail = (email: string) => {
@@ -108,15 +110,20 @@ export default function Home() {
   const updateItemsState = (newItems: Item[]) => {
     //console.log("Array 1: ", prevItems.current, "Array 2: ", newItems);
     if (!dataIsEqual(prevItems.current, newItems)) {
+      //console.log("Items are different!");
       setItems(newItems);
       setCurrentItem(0);
       prevItems.current = newItems;
       showTextControls.start("animate");
+      //resetSlideshowTimer();
+    } else {
+      //console.log("Items are the same!");
     }
   };
 
   useEffect(() => {
     fetchData();
+    console.log("First useEffect...");
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -139,11 +146,14 @@ export default function Home() {
     numItems.current = items.length;
     setImages(items[currentItem]?.vsearch_results || []);
     handleDurationCalculation();
+    console.log("items useEffect...");
+
   }, [items]);
 
   useEffect(() => {
     setImages(items[currentItem]?.vsearch_results || []); 
     handleDurationCalculation();
+    console.log("currentItem: ", currentItem);
   }, [currentItem]);
 
   const calculateDuration = (start: Date, end: Date) => {
@@ -164,6 +174,7 @@ export default function Home() {
       setTimerStarted(true);
     }
 
+
     duration_dwnld.current = calculateDuration(items[currentItem]?.start_dwnld, items[currentItem]?.end_dwnld);
     duration_s3_store.current = calculateDuration(items[currentItem]?.start_s3_store, items[currentItem]?.end_s3_store);
     duration_astra_store.current = calculateDuration(items[currentItem]?.start_astra_store, items[currentItem]?.end_astra_store);
@@ -175,6 +186,7 @@ export default function Home() {
 
   const startDataFetchTimer = () => {
     if (!isRunningFetchData) {
+      console.log("Starting data fetch timer...");
       setIsRunningFetchData(true);
       timerRefFetchData.current = setInterval(() => {
         fetchData();
@@ -184,6 +196,7 @@ export default function Home() {
 
   const startSlideshowTimer = () => {
     if (!isRunningSlideshow) {
+      console.log("Starting slideshow timer...");
       controls.set("initial");
       controls.start("animate");
       setIsRunningSlideshow(true);
@@ -204,6 +217,7 @@ export default function Home() {
   const resetSlideshowTimer = () => {
     setTimerStarted(false);
     setIsRunningSlideshow(false);
+    console.log("Resetting slideshow timer...");
     if (timerRef.current) {
       clearInterval(timerRef.current);
       startSlideshowTimer();
@@ -213,6 +227,7 @@ export default function Home() {
 
   const resetDataFetchTimer = () => {
     setIsRunningFetchData(false);
+    console.log("Resetting data fetch timer...");
     if (timerRefFetchData.current) {
       clearInterval(timerRefFetchData.current);
       startDataFetchTimer();
@@ -250,6 +265,43 @@ export default function Home() {
       }
     })
   }
+
+  const slideIndicatorSequence = () => {
+    if(scope.current === null) return;
+    //console.log("SCOPE: ", scope.current);
+    animate(
+      "#slide-indicator1",
+      {
+        transform: ["translateX(-100%)", "translateX(0%)", "translateX(100%)"]
+      },
+      {
+        duration: (slideshowInterval.current / 1000)*2,
+        repeatDelay: slideshowInterval.current / 1000,
+        repeat: Infinity,
+        repeatType: "loop"
+      }
+    );
+    animate(
+      "#slide-indicator2",
+      {
+        transform: ["translateX(-100%)", "translateX(0%)", "translateX(100%)"],
+      },
+      {
+        duration: (slideshowInterval.current / 1000)*2,
+        delay: slideshowInterval.current / 1000,
+        repeat: Infinity,
+        repeatType: "loop"
+      }
+    );
+    
+  }
+  //slideIndicatorSequence();
+
+  // const slideIndicatorSequence2 = [
+  //   ["#slide-indicator1", { x: [-100, 0, 100] }, { duration: slideshowInterval.current / 1000, repeat: Infinity }],
+  //   ["#slide-indicator2", { x: [-100, 0, 100] }, { duration: slideshowInterval.current / 1000, repeat: Infinity, delay: slideshowInterval.current / 1000}]
+  // ];
+  // animate(slideIndicatorSequence2);
 
   const slideIndicator = {
     initial: { 
@@ -327,39 +379,37 @@ export default function Home() {
   return (
     <main className="w-full h-screen overflow-hidden px-5">
       <div ref={scope}>
-        <AnimatePresence>
-          <motion.div
-            key={0}
-            id="slide-indicator1" 
-            variants={slideIndicator}
-            animate={controls}
-            initial="initial"
-            exit = "exit"
-            className="w-full fixed bottom-0 h-2 bg-[#7AA116]"
-          >
-          </motion.div>
-          <motion.div
-            key={1}
-            id="slide-indicator2"
-            variants={slideIndicator2}
-            animate={controls}
-            initial="initial"
-            exit = "exit"
-            className="w-full fixed bottom-0 h-2 bg-[#ED7101]"
-          >
-          </motion.div>
-          <motion.div
-            key={2}
-            id="text-indicator"
-            variants={newDataTextAnimation}
-            initial="initial"
-            animate={showTextControls}
-            exit="exit"
-            className="w-auto absolute bottom-0 bg-[#00A88D] text-white text-center py-2 px-4 rounded-sm shadow-lg my-10 mx-5 z-10"
-          >
-            New entry from {partialEmail(items[currentItem].email)}
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={0}
+          id="slide-indicator1" 
+          variants={slideIndicator}
+          animate={controls}
+          initial="initial"
+          exit = "exit"
+          className="w-full fixed bottom-0 h-2 bg-[#7AA116]"
+        >
+        </motion.div>
+        <motion.div
+          key={1}
+          id="slide-indicator2"
+          variants={slideIndicator2}
+          animate={controls}
+          initial="initial"
+          exit = "exit"
+          className="w-full fixed bottom-0 h-2 bg-[#ED7101]"
+        >
+        </motion.div>
+        <motion.div
+          key={2}
+          id="text-indicator"
+          variants={newDataTextAnimation}
+          initial="initial"
+          animate={showTextControls}
+          exit="exit"
+          className="w-auto absolute bottom-0 bg-[#00A88D] text-white text-center py-2 px-4 rounded-sm shadow-lg my-10 mx-5 z-10"
+        >
+          New entry from {partialEmail(items[currentItem].email)}
+        </motion.div>
       </div>
       <AnimatePresence>
         <motion.section 
@@ -372,13 +422,13 @@ export default function Home() {
         >
           <div className="items-start justify-center flex gap-10 overflow-hidden">
             <motion.div
-              className="w-1/5 aspect-square flex-shrink-0"
+              className="w-1/4 aspect-square flex-shrink-0"
               variants={processAnimationCard}
               initial="initial"
               whileInView="animate"
               custom={0}
             >
-              <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={300} height={300} className="bg-white relative object-cover h-full w-full rotate-90" />
+              
             </motion.div>
             <div>
               <motion.p 
@@ -388,7 +438,9 @@ export default function Home() {
                 whileInView="animate"
                 custom={2}
               >
-                {items[currentItem].description}
+                <p>ID: {items[currentItem]._id}</p>
+                <p>Description: {items[currentItem].description}</p>
+                <p>Email: {partialEmail(items[currentItem].email)}</p>
               </motion.p>
               <motion.div
                 variants={processAnimationCard}
@@ -396,22 +448,6 @@ export default function Home() {
                 whileInView="animate"
                 custom={5}
               >
-                <h2 className="font-bold text-xl mt-5">Similar Images:</h2>
-                <div className="py-5 items-center justify-start">
-                  <ul className="flex flex-row gap-5 justify-start">
-                    {images.map((image) => (
-                      <li key={image._id}>
-                        <Image 
-                          src={image.file_path} 
-                          alt={image.brand} 
-                          width={0} 
-                          height={0} 
-                          className="bg-white object-cover w-[100px] h-auto" 
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               </motion.div>
             </div>
           </div>

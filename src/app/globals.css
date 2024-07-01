@@ -32,7 +32,7 @@ body {
 
 .description {
   color: rgb(var(--text-color-rgb));
-  @apply text-lg;
+  @apply text-base;
 }
 
 .steps{
