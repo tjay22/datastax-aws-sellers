@@ -1,5 +1,8 @@
+import { GlobalConfig } from '../../app.config'
+
 export async function GET(request: Request) {
-  const res = await fetch('http://52.12.156.81:8980/images', {
+  const res = await fetch(GlobalConfig.apiURL, {
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json'
     },

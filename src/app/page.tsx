@@ -4,35 +4,10 @@ import Image from "next/image";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useAnimate, stagger, motion, animate, useAnimationControls, AnimatePresence, delay } from "framer-motion";
 import usePersistState from "./usePersistState";
+import { GlobalConfig } from "./app.config";
 
-interface Item {
-  _id: string;
-  description: string;
-  email: string;
-  s3_url: string;
-  vsearch_results: [];
-  start_dwnld: Date;
-  end_dwnld: Date;
-  start_s3_store: Date;
-  end_s3_store: Date;
-  start_astra_store: Date;
-  end_astra_store: Date;
-  start_get_desc: Date;
-  end_get_desc: Date;
-  start_embedding: Date;
-  end_embedding: Date;
-  start_vsearch: Date;
-  end_vsearch: Date;
-}
-
-interface SimilarImage {
-  _id: string;
-  brand: string;
-  file_path: string;
-  product_name: string;
-  similarity: number;
-  vsearch_results: any[]; // Add the vsearch_results property
-}
+import StepCard from "./components/StepCard";
+import { Item, SimilarImage } from "./types";
 
 export default function Home() {
 
@@ -46,23 +21,24 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [currentItem, setCurrentItem] = useState<number>(0);
   const [timerStarted, setTimerStarted] = useState<boolean>(false);
+  const [slideshowAnimation, setSlideshowAnimation] = useState<string>("in");
   
   const [isRunningSlideshow, setIsRunningSlideshow] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const slideshowInterval = useRef<number>(10000);
+  const slideshowInterval = useRef<number>(GlobalConfig.slideshowInterval);
+  const slideshowTransitionDuration = useRef<number>(GlobalConfig.slideshowTransitionDuration);
+  let slideshowTransitionDelay = slideshowInterval.current - slideshowTransitionDuration.current;
   const numItems = useRef<number>(0);
   const prevItems = useRef<Item[]>([]);
 
   const [isRunningFetchData, setIsRunningFetchData] = useState<boolean>(false);
   const timerRefFetchData = useRef<NodeJS.Timeout | null>(null);
-  const fetchInterval = useRef<number>(10000);
-  
-  const duration_dwnld = useRef<number | undefined>(0);
-  const duration_s3_store = useRef<number | undefined>(0);
-  const duration_astra_store = useRef<number | undefined>(0);
-  const duration_get_desc = useRef<number | undefined>(0);
-  const duration_embedding = useRef<number | undefined>(0);
-  const duration_vsearch = useRef<number | undefined>(0);
+  const fetchInterval = useRef<number>(GlobalConfig.slideshowInterval);
+
+  // window.addEventListener("pageshow", () => {console.log("Page Showed")});
+  // window.addEventListener("pagehide", () => {console.log("Page Hidden")});
+  // window.addEventListener("visibilitychange", () => {console.log("Visibility Changed")});
+  // window.addEventListener("timeupdate", () => {console.log("Time Updated")});
 
   const getData = async () => {
     // if (isRunningSlideshow) {
@@ -79,7 +55,7 @@ export default function Home() {
       //setItems(data.data);
       return data;
     } catch (error) {
-      setError('Failed to fetch images');
+      setError(GlobalConfig.messages.imagesLoadError);
       setLoading(false);
     }
   };
@@ -87,7 +63,8 @@ export default function Home() {
   const fetchData = () => {
     //console.log("items Array in fetchData: ", items);
     getData().then((data) => {
-      updateItemsState(data.data);
+      let reversedData = data.data.reverse();
+      updateItemsState(reversedData);
       //setImages(data.data[currentItem].vsearch_results);
       setLoading(false);
     });
@@ -108,6 +85,7 @@ export default function Home() {
   const updateItemsState = (newItems: Item[]) => {
     //console.log("Array 1: ", prevItems.current, "Array 2: ", newItems);
     if (!dataIsEqual(prevItems.current, newItems)) {
+      
       setItems(newItems);
       setCurrentItem(0);
       prevItems.current = newItems;
@@ -144,14 +122,8 @@ export default function Home() {
   useEffect(() => {
     setImages(items[currentItem]?.vsearch_results || []); 
     handleDurationCalculation();
+    console.log("Current Item: ", currentItem);
   }, [currentItem]);
-
-  const calculateDuration = (start: Date, end: Date) => {
-    const startTime = new Date(start).getTime();
-    const endTime = new Date(end).getTime();
-    const duration = endTime - startTime;
-    return !isNaN(duration) ? duration : 0;
-  };
 
   const handleDurationCalculation = () => {
 
@@ -163,13 +135,6 @@ export default function Home() {
       startSlideshowTimer();
       setTimerStarted(true);
     }
-
-    duration_dwnld.current = calculateDuration(items[currentItem]?.start_dwnld, items[currentItem]?.end_dwnld);
-    duration_s3_store.current = calculateDuration(items[currentItem]?.start_s3_store, items[currentItem]?.end_s3_store);
-    duration_astra_store.current = calculateDuration(items[currentItem]?.start_astra_store, items[currentItem]?.end_astra_store);
-    duration_get_desc.current = calculateDuration(items[currentItem]?.start_get_desc, items[currentItem]?.end_get_desc);
-    duration_embedding.current = calculateDuration(items[currentItem]?.start_embedding, items[currentItem]?.end_embedding);
-    duration_vsearch.current = calculateDuration(items[currentItem]?.start_vsearch, items[currentItem]?.end_vsearch);
 
   };
 
@@ -189,10 +154,13 @@ export default function Home() {
       setIsRunningSlideshow(true);
       setTimerStarted(true);
       timerRef.current = setInterval(() => {
+        setSlideshowAnimation("in");
+        setTimeout(() => {
+          setSlideshowAnimation("out");
+        }, slideshowTransitionDelay);
         setCurrentItem((prevItemNum) => {
           const newItemNum = prevItemNum + 1;
           if (newItemNum >= numItems.current) {
-            //window.location.reload();
             return 0; // Reset the counter
           }
           return newItemNum;
@@ -228,9 +196,9 @@ export default function Home() {
       opacity: 1,
       x: 0,
       transition: {
-        duration: 0.5,
-        easeInOut: 0.5,
-        delay: 0.5 * index
+        duration: GlobalConfig.cardAnimationDuration/1000,
+        easeInOut: GlobalConfig.cardAnimationDuration/1000,
+        delay: (GlobalConfig.cardStaggerDelay/1000) * index
       }
     })
   }
@@ -244,11 +212,26 @@ export default function Home() {
       opacity: 1,
       x: 0,
       transition: {
-        duration: 0.5,
-        easeInOut: 0.5,
-        delay: 0.55 * index
+        duration: GlobalConfig.cardAnimationDuration/1000,
+        easeInOut: GlobalConfig.cardAnimationDuration/1000,
+        delay: ((GlobalConfig.cardStaggerDelay/1000) + 0.05) * index
       }
     })
+  }
+
+  const sectionAnimationVariants = {
+    out: {
+      opacity: 0,
+      transition: {
+        duration: GlobalConfig.slideshowTransitionDuration/1000
+      }
+    },
+    in: {
+      opacity: 1,
+      transition: {
+        duration: GlobalConfig.slideshowTransitionDuration/1000
+      }
+    }
   }
 
   const slideIndicator = {
@@ -311,7 +294,7 @@ export default function Home() {
   if (loading) {
     return (
       <main className="container mx-auto p-10 min-h-screen flex items-center justify-center">
-        <div>Fetching latest items...</div>
+        <div>{GlobalConfig.messages.imagesFetching}</div>
       </main>
     );
   }
@@ -361,224 +344,88 @@ export default function Home() {
           </motion.div>
         </AnimatePresence>
       </div>
-      <AnimatePresence>
-        <motion.section 
-          key={currentItem} 
-          className="container h-screen mx-auto flex flex-col gap-10 py-10 overflow-hidden"
-          initial={{ y: "-100%", opacity: 0}}
-          animate={{ y: 0, opacity: 1}}
-          exit={{ y: "100%", opacity: 0}}
-          transition={{ duration: 0.5, ease: "easeInOut", type: "tween"}}
-        >
-          <div className="items-start justify-center flex gap-10 overflow-hidden">
-            <motion.div
-              className="w-1/5 aspect-square flex-shrink-0"
-              variants={processAnimationCard}
-              initial="initial"
-              whileInView="animate"
-              custom={0}
-            >
-              <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={300} height={300} className="bg-white relative object-cover h-full w-full rotate-90" />
-            </motion.div>
-            <div>
-              <motion.p 
-                className="description"
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
-                custom={2}
-              >
-                {items[currentItem].description}
-              </motion.p>
+        <AnimatePresence>
+          <motion.section 
+            key={currentItem} 
+            data-id={currentItem}
+            className="container h-screen mx-auto flex flex-col gap-10 py-10 overflow-hidden"
+            // initial={{ y: "-100%", opacity: 0}}
+            // animate={{ y: 0, opacity: 1}}
+            // exit={{ y: "100%", opacity: 0}}
+            // transition={{ duration: 0.5, ease: "easeInOut", type: "tween"}}
+            animate={slideshowAnimation}
+            variants={sectionAnimationVariants}
+          >
+            <div className="items-start justify-center flex gap-10 overflow-hidden">
               <motion.div
+                className="w-1/5 aspect-square flex-shrink-0 relative"
                 variants={processAnimationCard}
                 initial="initial"
-                whileInView="animate"
-                custom={5}
-              >
-                <h2 className="font-bold text-xl mt-5">Similar Images:</h2>
-                <div className="py-5 items-center justify-start">
-                  <ul className="flex flex-row gap-5 justify-start">
-                    {images.map((image) => (
-                      <li key={image._id}>
-                        <Image 
-                          src={image.file_path} 
-                          alt={image.brand} 
-                          width={0} 
-                          height={0} 
-                          className="bg-white object-cover w-[100px] h-auto" 
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-          
-          <div className="flex flex-row gap-5 justify-center">
-            <ul className="steps">
-              <motion.li 
-                className="step" 
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
+                animate="animate"
                 custom={0}
               >
-                <div className="title"><span className="step-counter"></span>Process Image</div>
-                <div className="icons">
-                  <Image src="Arch_Amazon-EC2_64.svg" alt="EC2" width={50} height={50} />
-                  <Image src="Arch-Category_Storage_64.svg" alt="S3" width={50} height={50} />
+                <div className="loader-container absolute flex items-center justify-center w-full h-full">
+                  <div className="loader"></div>
                 </div>
-                <p>EC2 to read image from Email, S3 to store image, Privatelink to connect to S3</p>
-                <div className="duration"><span>Duration:</span>{duration_s3_store.current} ms</div>
-                <motion.div 
-                  className="arrow"
-                  variants={processAnimationArrow}
-                  initial="initial"
-                  whileInView="animate"
-                  custom={0}
-                ></motion.div>
-              </motion.li>
-              <motion.li 
-                className="step" 
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
-                custom={1}
-              >
-                <div className="title"><span className="step-counter"></span>Store in Astra</div>
-                <div className="icons">
-                  <Image 
-                    src="astra_logo.jpg" 
-                    alt="Astra" 
-                    width={0} 
-                    height={0} 
-                    style={{ width: "120px", height: "auto" }}
-                  />
-                </div>
-                <p>Images are stored in Astra</p>
-                <div className="duration"><span>Duration:</span>{duration_astra_store.current} ms</div>
-                <motion.div 
-                  className="arrow"
-                  variants={processAnimationArrow}
-                  initial="initial"
-                  whileInView="animate"
-                  custom={1}
-                ></motion.div>
-              </motion.li>
-              <motion.li 
-                className="step" 
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
-                custom={2}
-              >
-                <div className="title"><span className="step-counter"></span>Generate Description</div>
-                <div className="icons">
-                  <Image 
-                    src="Arch_Amazon-Bedrock_64.svg" 
-                    alt="Bedrock" 
-                    width={0} 
-                    height={0} 
-                    style={{ width: "50px", height: "auto"  }}
-                  />
-                  <Image 
-                    src="claude3.jpg" 
-                    alt="Claude 3 Sonnet" 
-                    width={0} 
-                    height={0} 
-                    style={{ width: "120px", height: "auto"  }} 
-                  />
-                </div>
-                <p>Image description generated by Claude 3 Sonnet</p>
-                <div className="duration"><span>Duration:</span>{duration_get_desc.current} ms</div>
-                <motion.div 
-                  className="arrow"
-                  variants={processAnimationArrow}
+                <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={0} height={0} className="bg-transparent relative object-cover h-full w-full" />
+              </motion.div>
+              <div>
+                <motion.p 
+                  className="description"
+                  variants={processAnimationCard}
                   initial="initial"
                   whileInView="animate"
                   custom={2}
-                ></motion.div>
-              </motion.li>
-              <motion.li 
-                className="step" 
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
-                custom={3}
-              >
-                <div className="title"><span className="step-counter"></span>Generate Embedding</div>
-                <div className="icons">
-                  <Image 
-                    src="Arch_Amazon-Bedrock_64.svg" 
-                    alt="Bedrock" 
-                    width={0} 
-                    height={0} 
-                    style={{ width: "50px", height: "auto" }}
-                  />
-                </div>
-                <p>Bedrock to generate embedding from image and description</p>
-                <div className="duration"><span>Duration:</span>{duration_embedding.current} ms</div>
-                <motion.div 
-                  className="arrow"
-                  variants={processAnimationArrow}
+                >
+                  {items[currentItem].description}
+                </motion.p>
+                <motion.div
+                  variants={processAnimationCard}
                   initial="initial"
-                  whileInView="animate"
-                  custom={3}
-                ></motion.div>
-              </motion.li>
-              <motion.li 
-                className="step" 
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
-                custom={4}
-              >
-                <div className="title"><span className="step-counter"></span>Vector Search</div>
-                <div className="icons">
-                  <Image 
-                    src="astra_logo.jpg" 
-                    alt="Astra" 
-                    width={0} 
-                    height={0}
-                    style={{ width: "120px", height: "auto" }} 
+                  animate="animate"
+                  custom={5}
+                >
+                  <h2 className="font-bold text-xl mt-5">Similar Images:</h2>
+                  <div className="py-5 items-center justify-start">
+                    <ul className="flex flex-row gap-5 justify-start">
+                      {images.map((image) => (
+                        <li key={image._id}>
+                          <Image 
+                            src={image.file_path} 
+                            alt={image.brand} 
+                            width={0} 
+                            height={0} 
+                            className="bg-white object-cover w-[100px] h-auto" 
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+            
+            <div className="flex flex-row gap-5 justify-center">
+              <ul className="steps">
+                {GlobalConfig.steps.map((step, index) => (
+                  <StepCard 
+                    key={index}
+                    id={index} 
+                    items={items}
+                    currentItem={currentItem}
+                    durationStartVar={step.duration_start_var}
+                    durationEndVar={step.duration_end_var}
+                    processAnimationCard={processAnimationCard}
+                    processAnimationArrow={processAnimationArrow}
+                    title={step.title}
+                    description={step.description}
+                    icons={step.icons}
                   />
-                </div>
-                <p>Search for similar images in Astra</p>
-                <div className="duration"><span>Duration:</span>{duration_vsearch.current} ms</div>
-                <motion.div 
-                  className="arrow"
-                  variants={processAnimationArrow}
-                  initial="initial"
-                  whileInView="animate"
-                  custom={4}
-                ></motion.div>
-              </motion.li>
-              <motion.li 
-                className="step" 
-                variants={processAnimationCard}
-                initial="initial"
-                whileInView="animate"
-                custom={5}
-              >
-                <div className="title"><span className="step-counter"></span>Display Results</div>
-                <div className="icons">
-                  <Image 
-                    src="Nextjs-logo.svg" 
-                    alt="NextJS" 
-                    width={0} 
-                    height={0} 
-                    style={{ width: "150px", height: "auto", fill: "white"}}
-                  />
-                </div>
-                <p>Results are displayed on the dashboard</p>
-                <div className="duration"><span>Duration:</span>{duration_dwnld.current} ms</div>
-              </motion.li>
-            </ul>
-          </div>
-        </motion.section>
-      </AnimatePresence>
+                ))}
+              </ul>
+            </div>
+          </motion.section>
+        </AnimatePresence>
     </main>
   );
 }

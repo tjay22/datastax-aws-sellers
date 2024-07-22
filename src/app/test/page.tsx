@@ -87,7 +87,8 @@ export default function Home() {
   const fetchData = () => {
     //console.log("items Array in fetchData: ", items);
     getData().then((data) => {
-      updateItemsState(data);
+      let reversedData = data.reverse();
+      updateItemsState(reversedData);
       //setImages(data.data[currentItem].vsearch_results);
       setLoading(false);
     });
