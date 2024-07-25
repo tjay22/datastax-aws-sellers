@@ -4,8 +4,9 @@ export const GlobalConfig: Config = {
   title: 'DataStax AWS Sellers',
   description: 'DataStax AWS Sellers',
   apiURL: 'http://52.12.156.81:8980/images',
+  reverseData: false, //reverse the order of the data
   slideshowInterval: 6000, //interval between each slide
-  slideshowTransitionDuration: 500, //fade out duration at the end of each slide
+  slideshowTransitionDuration: 800, //fade out duration at the end of each slide
   cardAnimationDuration: 800, //duration of the card animation
   cardStaggerDelay: 500, //delay between each card animation
 

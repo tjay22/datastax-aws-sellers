@@ -35,24 +35,13 @@ export default function Home() {
   const timerRefFetchData = useRef<NodeJS.Timeout | null>(null);
   const fetchInterval = useRef<number>(GlobalConfig.slideshowInterval);
 
-  // window.addEventListener("pageshow", () => {console.log("Page Showed")});
-  // window.addEventListener("pagehide", () => {console.log("Page Hidden")});
-  // window.addEventListener("visibilitychange", () => {console.log("Visibility Changed")});
-  // window.addEventListener("timeupdate", () => {console.log("Time Updated")});
-
+  // API Fetch handler
   const getData = async () => {
-    // if (isRunningSlideshow) {
-    //   setIsRunningSlideshow(false);
-    //   if (timerRef.current) {
-    //     clearInterval(timerRef.current);
-    //   }
-    // }
     try {
       const response = await fetch("api/images", {
         cache: "no-store",
       });
       const data = await response.json();
-      //setItems(data.data);
       return data;
     } catch (error) {
       setError(GlobalConfig.messages.imagesLoadError);
@@ -60,12 +49,16 @@ export default function Home() {
     }
   };
 
+  // Function that fetches data from the API and updates the items state which triggers the useEffect
   const fetchData = () => {
-    //console.log("items Array in fetchData: ", items);
     getData().then((data) => {
-      let reversedData = data.data.reverse();
-      updateItemsState(reversedData);
-      //setImages(data.data[currentItem].vsearch_results);
+      const datafromApi = data.data;
+      const reversedData = [...datafromApi].reverse();
+      if(GlobalConfig.reverseData) {
+        updateItemsState(reversedData);
+      } else {
+        updateItemsState(datafromApi);
+      }
       setLoading(false);
     });
   };
@@ -74,6 +67,7 @@ export default function Home() {
     return email.replace(/(.{2})(.*)(?=@)/, (a, b, c) => b + c.replace(/./g, "*"));
   }
 
+  // Function to compare the previous and new data
   const dataIsEqual = (arr1: Item[], arr2: Item[]): boolean => {
     if (arr1.length !== arr2.length) return false;
     for (let i = 0; i < arr1.length; i++) {
@@ -82,10 +76,9 @@ export default function Home() {
     return true;
   };
 
+  // Function to check if the data has changed. If it has, update the items state and start slideshow from item[0]
   const updateItemsState = (newItems: Item[]) => {
-    //console.log("Array 1: ", prevItems.current, "Array 2: ", newItems);
     if (!dataIsEqual(prevItems.current, newItems)) {
-      
       setItems(newItems);
       setCurrentItem(0);
       prevItems.current = newItems;
@@ -93,6 +86,7 @@ export default function Home() {
     }
   };
 
+  // Step 1: Fetch Data from API and clear any active timers
   useEffect(() => {
     fetchData();
     return () => {
@@ -105,31 +99,21 @@ export default function Home() {
     };
   }, []);
 
-  // useEffect(() => {
-  //   console.log("IMAGES: ", images);
-  // },[images]);
-
-  // useEffect(() => {
-  //   console.log("ID ARRAY: ", ids);
-  // },[ids]);
-
+  // useEffect triggered by items state change (from fetchData())
   useEffect(() => {
     numItems.current = items.length;
     setImages(items[currentItem]?.vsearch_results || []);
-    handleDurationCalculation();
+    handleTimers();
   }, [items]);
 
   useEffect(() => {
-    setImages(items[currentItem]?.vsearch_results || []); 
-    handleDurationCalculation();
     console.log("Current Item: ", currentItem);
   }, [currentItem]);
 
-  const handleDurationCalculation = () => {
+  const handleTimers = () => {
 
     if(!items[currentItem]) return;
 
-    //setCurrentItem(currentItem);
     if (!timerStarted) {
       startDataFetchTimer();
       startSlideshowTimer();
@@ -138,6 +122,7 @@ export default function Home() {
 
   };
 
+  // Data Fetch Timer
   const startDataFetchTimer = () => {
     if (!isRunningFetchData) {
       setIsRunningFetchData(true);
@@ -147,6 +132,7 @@ export default function Home() {
     }
   };
 
+  // Slideshow Timer
   const startSlideshowTimer = () => {
     if (!isRunningSlideshow) {
       controls.set("initial");
@@ -186,6 +172,8 @@ export default function Home() {
       startDataFetchTimer();
     }
   };
+
+  /* Animation definitions start here */
 
   const processAnimationCard = {
     initial: { 
@@ -252,6 +240,7 @@ export default function Home() {
       }
     }
   }
+
   const slideIndicator2 = {
     initial: { 
       x: "-100%" 
@@ -271,6 +260,7 @@ export default function Home() {
       }
     }
   }
+  
   const newDataTextAnimation = {
     initial: {
       opacity: 0
@@ -290,6 +280,8 @@ export default function Home() {
       }
     }
   }
+
+  /* Animation definitions end here */
 
   if (loading) {
     return (
@@ -344,15 +336,11 @@ export default function Home() {
           </motion.div>
         </AnimatePresence>
       </div>
-        <AnimatePresence>
+        <AnimatePresence mode="sync">
           <motion.section 
             key={currentItem} 
             data-id={currentItem}
             className="container h-screen mx-auto flex flex-col gap-10 py-10 overflow-hidden"
-            // initial={{ y: "-100%", opacity: 0}}
-            // animate={{ y: 0, opacity: 1}}
-            // exit={{ y: "100%", opacity: 0}}
-            // transition={{ duration: 0.5, ease: "easeInOut", type: "tween"}}
             animate={slideshowAnimation}
             variants={sectionAnimationVariants}
           >
@@ -367,7 +355,7 @@ export default function Home() {
                 <div className="loader-container absolute flex items-center justify-center w-full h-full">
                   <div className="loader"></div>
                 </div>
-                <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={0} height={0} className="bg-transparent relative object-cover h-full w-full" />
+                <Image src={items[currentItem].s3_url} alt={items[currentItem].description} width={0} height={0} className="bg-transparent relative object-cover h-full w-full rotate-90" />
               </motion.div>
               <div>
                 <motion.p 

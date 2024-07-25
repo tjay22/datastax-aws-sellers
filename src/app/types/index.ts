@@ -22,6 +22,7 @@ export interface Config {
   title: string;
   description: string;
   apiURL: string;
+  reverseData: boolean;
   slideshowInterval: number;
   slideshowTransitionDuration: number;
   cardAnimationDuration: number;
